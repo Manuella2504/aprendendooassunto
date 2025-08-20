@@ -1,42 +1,44 @@
-const express = require('express');
-const mysql = require('mysql2');
-const bodyParser = require('body-parser');
-const path = require('path');
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+import express from 'express';
+import ejs from 'ejs';
+import mysql2 from 'mysql2';
+import bodyParser from 'body-parser';
+
+// Define __filename e __dirname para ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join (__dirname, 'public')));
-//junte tudo no meu diretório "dirname" em uma pasta chamada public
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.get('/', (req, res) => {
-    res.sendFile(path.join (process.cwd() + 'index.html'))
+    res.sendFile(path.join(process.cwd(), 'index.html'));
 });
 
-const db = mysql.createConnection({
+const db = mysql2.createConnection({
     host: '127.0.0.1',
     user: 'root',
-    password:'',
-    database: 'crud',
+    password: '',
+    database: 'atividadeprocessual',
     port: 3309
 });
-//conexão com  base de dados
 
 app.post('/cadastrar', (req, res) => {
+    const {nomeProd, PrecoCompra, Quantidade, Datacompra} = req.body;
 
-const {nome, email, telefone} = req.body;
-    //tem que está o msm nome do html
+    const sql = 'INSERT INTO usuarios(nomeProd, PrecoCompra, Quantidade, Datacompra) VALUES (?, ?, ?, ?)';
 
-    const sql = 'INSERT INTO usuarios(nome, email, telefone) VALUES(?, ?, ?)';
-    //dentro d atabela usuarios eu tenho tres campos
-//PRECISAM ESTÁ NA ORDEM QUE FORAM INFORMADAS DENTRO DA MINHA STRING
-db.query(sql, [nome, email, telefone] , (err, result) =>{
-if (err) throw err;
-//caso haja um erro, ele será mostrado
-res.send("Usuário encontrado com sucesso!");
-});
+    db.query(sql, [nomeProd, PrecoCompra, Quantidade, Datacompra], (err, result) => {
+        if (err) throw err;
+        res.send("Usuário cadastrado com sucesso!");
+    });
 });
 
-app.listen( 3007, () =>{
+app.listen(3007, () => {
     console.log('http://localhost:3007');
-})
-
+});
