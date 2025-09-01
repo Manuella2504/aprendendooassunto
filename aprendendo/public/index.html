@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulário de Contato</title>
     <link rel="stylesheet" href="formulario.css">
+    
 </head>
 <body>
     <div class="container">
-        <h1>Formulário de Contato</h1>
+        <h1>Formulário de Cadastro de Produtos</h1>
         
         <form action="/cadastrar" method="post" id="contactForm">
             <div class="form-group">
@@ -19,14 +19,14 @@
             
             <div class="form-group">
                 <label for="preco">Preço da compra:</label>
-                <input type="number" id="preco" name="PrecoCompra" required>
+                <input type="number" id="preco" name="PrecoCompra" step="0.01" min="0" required>
             </div>
             
             <div class="form-group">
                 <label for="quantidade">Quantidade:</label>
-                <input type="number" id="quantidade" name="Quantidade" required>
+                <input type="number" id="quantidade" name="Quantidade" min="1" required>
             </div>
-
+            
             <div class="form-group">
                 <label for="datacompra">Data da compra:</label>
                 <input type="date" id="datacompra" name="Datacompra" required>
@@ -34,15 +34,126 @@
             
             <div class="button-group">
                 <button type="submit" class="btn-confirm">
-                    Confirmar
+                    Cadastrar Produto
                 </button>
-                <button type="button" class="btn-delete" onclick="deletarFormulario()">
-                    Deletar
+                <button type="button" class="btn-limpar" onclick="limparFormulario()">
+                    Limpar Campos
                 </button>
             </div>
         </form>
         
+        <button type="button" class="btn-listar" onclick="listarProdutos()">
+            Listar Produtos Cadastrados
+        </button>
+        
         <div id="message" class="message"></div>
+        
+        <div id="produtos-lista" class="produtos-container"></div>
     </div>
+
+    <script>
+        // Função para limpar os campos do formulário
+        function limparFormulario() {
+            document.getElementById('contactForm').reset();
+            document.getElementById('message').innerHTML = '';
+        }
+
+        // Função para mostrar mensagem
+        function mostrarMensagem(texto, tipo = 'success') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = texto;
+            messageDiv.className = `message ${tipo}`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+                messageDiv.className = 'message';
+            }, 3000);
+        }
+
+        // Função para listar produtos
+        async function listarProdutos() {
+            try {
+                const response = await fetch('/produtos');
+                const produtos = await response.json();
+                
+                const listaDiv = document.getElementById('produtos-lista');
+                
+                if (produtos.length === 0) {
+                    listaDiv.innerHTML = '<p style="text-align: center; color: #666;">Nenhum produto cadastrado.</p>';
+                    return;
+                }
+                
+                let html = '<h2>Produtos Cadastrados:</h2>';
+                produtos.forEach(produto => {
+                    const dataFormatada = new Date(produto.Datacompra).toLocaleDateString('pt-BR');
+                    html += `
+                        <div class="produto-item">
+                            <div class="produto-info">
+                                <strong>${produto.nomeProd}</strong><br>
+                                Preço: R$ ${parseFloat(produto.PrecoCompra).toFixed(2)}<br>
+                                Quantidade: ${produto.Quantidade}<br>
+                                Data: ${dataFormatada}
+                            </div>
+                            <button class="btn-delete-item" onclick="deletarProduto(${produto.id})">
+                                Deletar
+                            </button>
+                        </div>
+                    `;
+                });
+                
+                listaDiv.innerHTML = html;
+            } catch (error) {
+                mostrarMensagem('Erro ao carregar produtos', 'error');
+            }
+        }
+
+        // Função para deletar produto
+        async function deletarProduto(id) {
+            if (!confirm('Tem certeza que deseja deletar este produto?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/deletar/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    mostrarMensagem(result.message, 'success');
+                    listarProdutos(); // Recarrega a lista
+                } else {
+                    mostrarMensagem(result.error, 'error');
+                }
+            } catch (error) {
+                mostrarMensagem('Erro ao deletar produto', 'error');
+            }
+        }
+
+        // Interceptar o envio do formulário para mostrar mensagem
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('/cadastrar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                mostrarMensagem(data, 'success');
+                this.reset();
+                // Recarrega a lista se ela estiver visível
+                const listaDiv = document.getElementById('produtos-lista');
+                if (listaDiv.innerHTML.trim() !== '') {
+                    listarProdutos();
+                }
+            })
+            .catch(error => {
+                mostrarMensagem('Erro ao cadastrar produto', 'error');
+            });
+        });
+    </script>
 </body>
 </html>
